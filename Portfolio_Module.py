@@ -38,7 +38,10 @@ class Stock:
 
 	def GetStockPrice(self,Date):
 		SH=self.stock_history
-		return SH[SH.index==Date]['Close'][0]
+		if len(SH[SH.index==Date].index)==0:
+			return None
+		else:
+			return SH[SH.index==Date]['Close'][0]
 		###
 
 
