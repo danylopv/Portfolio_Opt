@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 import math
 from scipy.optimize import LinearConstraint
 
+# Here goes a brief description
+
 # stock = ['TSLA','PFE','MSFT','KO','GOOGL','AMZN','MCD','BA','C','FDX']
 stock = ['TSLA','AMZN','PFE']
 
