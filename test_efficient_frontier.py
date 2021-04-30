@@ -42,6 +42,8 @@ ret_corr = retns.corr()
 
 weights = np.ones(len(stock))/len(stock)
 
+
+
 def exp_return(ret_mean, weights):
     er = sum(ret_mean.values * weights.T)
     return(er)
@@ -66,12 +68,49 @@ def efficient_frontier(ret_mean,ret_cov,N):
     
 def plot_efficient_frontier(ret_mean,ret_cov,N=10000):    
     (std,m,gen)=efficient_frontier(ret_mean,ret_cov,N)
-    plt.scatter(std,m)
+
+    fig,ax = plt.subplots()
+    sc=plt.scatter(std,m)
+
+
+    annot = ax.annotate("", xy=(0,0), xytext=(20,20),textcoords="offset points",
+                    bbox=dict(boxstyle="round", fc="w"),
+                    arrowprops=dict(arrowstyle="->"))
+    annot.set_visible(False)
+
+    def update_annot(ind):
+
+        pos = sc.get_offsets()[ind["ind"][0]]
+        annot.xy = pos
+        text = "{}".format(" ".join(list(map(str,gen[ind["ind"]]))))
+        annot.set_text(text)
+       #annot.get_bbox_patch().set_facecolor(cmap(norm(c[ind["ind"][0]])))
+        annot.get_bbox_patch().set_alpha(0.4)
+
+
+    def hover(event):
+        vis = annot.get_visible()
+        if event.inaxes == ax:
+            cont, ind = sc.contains(event)
+            if cont:
+                update_annot(ind)
+                annot.set_visible(True)
+                fig.canvas.draw_idle()
+            else:
+                if vis:
+                    annot.set_visible(False)
+                    fig.canvas.draw_idle()
+
+    fig.canvas.mpl_connect("motion_notify_event", hover)
+
+
     plt.title("Efficient Frontier")
     plt.xlabel("std")
     plt.ylabel("mean")
     plt.grid()
     plt.show()
+
+
     
 def get_optimum(ret_mean,ret_cov,N,risk):
     (std,m,gen)=efficient_frontier(ret_mean,ret_cov,N)
@@ -92,3 +131,8 @@ def summary(ret_mean,ret_cov,W=np.ones(len(ret_mean))):
         w.iloc[i]=W[0][i]
     df=pd.DataFrame({'mean':ret_mean,'std':stdev,'weights':w})
     return(df)
+<<<<<<< HEAD
+=======
+
+plot_efficient_frontier(ret_mean,ret_cov,500)
+>>>>>>> 6dad0caec0e796668c3faf0d8ca19f2d4dd81248
