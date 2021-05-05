@@ -7,12 +7,12 @@ Created on Wed Apr  7 17:15:16 2021
 """
 
 import numpy as np
-import numpy.ma as ma
 import pandas as pd
 import yfinance as yf
 import matplotlib.pyplot as plt
 import math
-from scipy.optimize import LinearConstraint
+from scipy.optimize import minimize
+from scipy.optimize import Bounds
 
 # Here goes a brief description
 
@@ -40,19 +40,13 @@ ret_mean = retns.mean()
 ret_cov = retns.cov()
 ret_corr = retns.corr()
 
+risk=(ret_cov.iloc[0,0]+ret_cov.iloc[1,1]+ret_cov.iloc[2,2])/3
+
 weights = np.ones(len(stock))/len(stock)
 
 
-
-def exp_return(ret_mean, weights):
-    er = sum(ret_mean.values * weights.T)
-    return(er)
-
-def var_return(ret_cov,weights):
-    vr = sum(weights * ret_cov.values.dot(weights))
-    return(vr)
-
 def efficient_frontier(ret_mean,ret_cov,N):
+    '''Sampling the convex envelope efficient frontier'''
     m=np.zeros(N)
     std=np.zeros(N)
     l=len(ret_mean)
@@ -61,8 +55,8 @@ def efficient_frontier(ret_mean,ret_cov,N):
         generator = np.random.rand(len(ret_mean))
         rdm_weights = generator/sum(generator)
         gen[i,:]=rdm_weights
-        m[i]=exp_return(ret_mean,rdm_weights)
-        std[i]=math.sqrt(var_return(ret_cov,rdm_weights))
+        m[i]=get_exp_return(ret_mean,rdm_weights)
+        std[i]=math.sqrt(get_exp_risk(ret_cov,rdm_weights))
     res=(std,m,gen)
     return(res)
     
@@ -110,18 +104,44 @@ def plot_efficient_frontier(ret_mean,ret_cov,N=10000):
     plt.grid()
     plt.show()
 
+def get_optimal_return(ret_mean,ret_cov,risk):
+    '''Get the optimal portfolio weights provided a risk upper bound'''
+    N = len(ret_mean)
+    w0 = np.tile(1/N,N)
+    objective = lambda w: -get_exp_return(ret_mean,w)
+    ineq_cons = {'type': 'ineq',
+             'fun' : lambda w: risk-get_exp_risk(ret_cov,w)}
+    eq_cons = {'type': 'eq',
+               'fun' : lambda w: sum(w)-1}
+    bounds = Bounds(np.tile(0,N).tolist(), np.tile(1,N).tolist())
+    opts = {'ftol':1e-9,'disp':True}
+    opt = minimize(objective,w0,method='SLSQP',
+                   constraints=[eq_cons, ineq_cons], 
+                   options=opts, bounds=bounds)
+    return(opt.x)
 
+def get_optimal_risk(ret_mean,ret_cov,ret):
+    '''Get the optimal portfolio weights provided a return lower bound'''
+    N = len(ret_mean)
+    w0 = np.tile(1/N,N)
+    objective = lambda w: get_exp_risk(ret_cov,w)
+    ineq_cons = {'type': 'ineq',
+             'fun' : lambda w: get_exp_return(ret_mean,w)-ret}
+    eq_cons = {'type': 'eq',
+               'fun' : lambda w: sum(w)-1}
+    bounds = Bounds(np.tile(0,N).tolist(), np.tile(1,N).tolist())
+    opts = {'ftol':1e-9,'disp':True}
+    opt = minimize(objective,w0,method='SLSQP',
+                   constraints=[eq_cons, ineq_cons], 
+                   options=opts, bounds=bounds)
+    return(opt.x)
     
-def get_optimum(ret_mean,ret_cov,N,risk):
-    (std,m,gen)=efficient_frontier(ret_mean,ret_cov,N)
-    loc1=np.logical_and((0.999*risk<=std),(std<=1.001*risk))
-    optimum=max(m[loc1])
-    loc2=(m==optimum)
-    W=gen[loc2,:]
-    s=summary(ret_mean,ret_cov,W)
-    res=(s,optimum)
-    return(res)
-    
+def get_exp_return(ret_mean,w):
+    return(sum(ret_mean*w))
+
+def get_exp_risk(ret_cov,w):
+    return(sum(w*ret_cov.dot(w)))
+
 def summary(ret_mean,ret_cov,W=np.ones(len(ret_mean))):
     n=len(ret_mean)
     w=pd.Series(index=ret_mean.index.values.tolist(),dtype='float64')
@@ -131,8 +151,6 @@ def summary(ret_mean,ret_cov,W=np.ones(len(ret_mean))):
         w.iloc[i]=W[0][i]
     df=pd.DataFrame({'mean':ret_mean,'std':stdev,'weights':w})
     return(df)
-<<<<<<< HEAD
-=======
+
 
 plot_efficient_frontier(ret_mean,ret_cov,500)
->>>>>>> 6dad0caec0e796668c3faf0d8ca19f2d4dd81248
