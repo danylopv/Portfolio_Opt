@@ -1,3 +1,4 @@
 # Portfolio_Opt
 
-Plan to develop methods and tools for stock portfolio optimization 
+Methods and tools for stock portfolio optimization 
+Stock risk evaluation
